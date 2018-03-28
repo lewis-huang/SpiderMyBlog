@@ -112,14 +112,14 @@ class HtmlParser(object):
             '''
             new_urls = set()
             # 抽取符合要求的  a 标记
-            links = soup.find_all('a',href=re.compile(r'/item/'))
+            links = soup.find_all('li',class_='blog-unit').find_all('a')
             for link in links:
                 # 提取 href 属性
                 new_url = link['href']
                 # 拼接成完整网址
-                new_full_url = parse.urljoin(page_url,new_url)
-                new_urls.add(new_full_url)
-                print(new_full_url)
+
+                new_urls.add(new_url)
+                print(new_url)
             return new_urls
 
         def _get_new_data(self,page_url,soup):
@@ -210,5 +210,5 @@ class SpiderMan(object):
 
 if __name__ =="__main__":
     spider_man=SpiderMan()
-    spider_man.crawl("http://blog.csdn.net/wujiandao/article/details/79533493")
+    spider_man.crawl("https://blog.csdn.net/wujiandao/article/list")
 
