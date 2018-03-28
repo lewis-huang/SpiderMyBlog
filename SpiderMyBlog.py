@@ -100,8 +100,12 @@ class HtmlParser(object):
                 return
             soup = BeautifulSoup(html_cont,'html.parser')
             new_urls=self._get_new_urls(page_url,soup)
-            new_data=self._get_new_data(page_url,soup)
-            return new_urls,new_data
+
+            # new_datas = set()
+            # for urli in new_urls :
+            #       new_data=self._get_new_data(urli,soup)
+            #       new_datas.add(new_data)
+            return new_urls
 
         def _get_new_urls(self,page_url,soup):
             '''
@@ -112,7 +116,7 @@ class HtmlParser(object):
             '''
             new_urls = set()
             # 抽取符合要求的  a 标记
-            links = soup.find_all('li',class_='blog-unit').find_all('a')
+            links = soup.find_all('a',href=re.compile('https://blog.csdn.net/wujiandao/article/details/[0-9]*'))
             for link in links:
                 # 提取 href 属性
                 new_url = link['href']
@@ -132,10 +136,9 @@ class HtmlParser(object):
 
             data = {}
             data['article_url'] = page_url
-            title = soup.find('article').find('h1')
-            data['title']=title.get_text()
-            update_date = soup.find('span', class_='time')
-            data['update_date']=update_date.get_text()
+            title = soup.find_all("title")
+            data['title']=title.string
+            data['update_date'] = "2018-01-01"
 
             print(data)
             return data
@@ -152,11 +155,11 @@ class DataOutput(object):
     def store_data(self,data):
         if data is None:
             return
-        self.datas.append(data)
-        add_content = (" insert into article_header(article_url,title,update_date) values(%s,%s,%s)")
-        content = (data["article_url"],data["title"],data["update_date"])
-        self.cursor.execute(add_content,content)
-        self.cnx.commit()
+        for data_shard in data:
+            add_content = " insert into article_header(article_url) values(%s)"
+            content = data_shard
+            self.cursor.execute(add_content,content)
+            self.cnx.commit()
 
     def output_html(self):
         fout = codecs.open('baike.html','w')
@@ -194,11 +197,11 @@ class SpiderMan(object):
                 # 从 HTML 下载器下载网页
                 html = self.downloader.download(new_url)
                 # HTML 解析器抽取网页数据
-                new_urls,data = self.parser.parser(new_url,html)
+                new_urls = self.parser.parser(new_url,html)
                 # 将抽取的 URL 添加到 URL 管理器中
-                self.manager.add_new_urls(new_urls)
+                # self.manager.add_new_urls(new_urls)
                 # 数据存储器存储文件
-                self.output.store_data(data)
+                self.output.store_data(new_urls)
                 message = "已经抓取 {s} 个链接".format(s= self.manager.old_url_size())
                 print(message)
             except Exception:
