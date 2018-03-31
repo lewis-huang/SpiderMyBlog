@@ -101,11 +101,11 @@ class HtmlParser(object):
             soup = BeautifulSoup(html_cont,'html.parser')
             new_urls=self._get_new_urls(page_url,soup)
 
-            # new_datas = set()
-            # for urli in new_urls :
-            #       new_data=self._get_new_data(urli,soup)
-            #       new_datas.add(new_data)
-            return new_urls
+            new_datas = []
+            for urli in new_urls :
+                new_data=self._get_new_data(urli,soup)
+                new_datas.append(new_data)
+            return new_urls,new_datas
 
         def _get_new_urls(self,page_url,soup):
             '''
@@ -123,7 +123,7 @@ class HtmlParser(object):
                 # 拼接成完整网址
 
                 new_urls.add(new_url)
-                print(new_url)
+               # print(new_url)
             return new_urls
 
         def _get_new_data(self,page_url,soup):
@@ -135,10 +135,15 @@ class HtmlParser(object):
             '''
 
             data = {}
+            Htmldownloader = HtmlDownloader()
+
             data['article_url'] = page_url
-            title = soup.find_all("title")
-            data['title']=title.string
-            data['update_date'] = "2018-01-01"
+            html =  Htmldownloader.download(page_url)
+            ind_soup = BeautifulSoup(html, 'html.parser')
+            title = ind_soup.find_all("h1",class_="csdn_top")
+            data['title']=title[0].string
+            updated = ind_soup.find_all("span",class_="time")
+            data['update_date'] = updated[0].string
 
             print(data)
             return data
@@ -156,9 +161,12 @@ class DataOutput(object):
         if data is None:
             return
         for data_shard in data:
-            add_content = " insert into article_header(article_url) values(%s)"
-            content = data_shard
-            self.cursor.execute(add_content,content)
+
+            add_content =  " insert into article_header(article_url,title,update_date) values('%s','%s','%s' )" % (data_shard["article_url"],data_shard["title"],data_shard["update_date"])
+            #(%(article_url)s, %(article_title)s, %(article_update_date)s )
+            # {"article_url":data_shard["article_url"],"article_title":data_shard["title"],"article_update_date":data_shard["update_date"]}
+            # content = (data_shard["article_url"],data_shard["title"],data_shard["update_date"])
+            self.cursor.execute(add_content )
             self.cnx.commit()
 
     def output_html(self):
@@ -197,15 +205,16 @@ class SpiderMan(object):
                 # 从 HTML 下载器下载网页
                 html = self.downloader.download(new_url)
                 # HTML 解析器抽取网页数据
-                new_urls = self.parser.parser(new_url,html)
+                new_urls,datas = self.parser.parser(new_url,html)
                 # 将抽取的 URL 添加到 URL 管理器中
                 # self.manager.add_new_urls(new_urls)
                 # 数据存储器存储文件
-                self.output.store_data(new_urls)
+                self.output.store_data(datas)
                 message = "已经抓取 {s} 个链接".format(s= self.manager.old_url_size())
                 print(message)
             except Exception:
                 print("failed to get content")
+                print ( errorcode)
 
 
        # self.output.output_html()
