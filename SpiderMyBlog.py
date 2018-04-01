@@ -197,8 +197,9 @@ class SpiderMan(object):
     def crawl(self,root_url):
         # 添加入口 URL
         self.manager.add_new_url(root_url)
-        for i in range(2,10):
+        for i in range(2,11):
             url_to_be_download = "https://blog.csdn.net/wujiandao/article/list/" + str(i)
+            print(str(i))
             self.manager.add_new_url(url_to_be_download)
         # 判断 URL 管理器中是否有新的 url, 同时判断抓取了多少个 URL
         while(self.manager.has_new_url()):
