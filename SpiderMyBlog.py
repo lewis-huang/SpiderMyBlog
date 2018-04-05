@@ -5,7 +5,7 @@ import re
 import mysql.connector
 from urllib import parse
 from bs4 import BeautifulSoup
-from mysql.connector import errorcode
+from mysql.connector import errorcode, Error
 
 class UrlManager(object):
     def __init__(self):
@@ -76,7 +76,7 @@ class HtmlDownloader(object):
             return None
         user_agent = 'Mozilla/4.0 (compatible; MSIE 5.5; Windows NT'
         headers = {'User-Agent':user_agent}
-        r = requests.get(url,headers=headers)
+        r = requests.get(url,headers=headers,timeout = 10 )
 
         if r.status_code == 200 :
             r.encoding = 'utf-8'
@@ -116,7 +116,7 @@ class HtmlParser(object):
             '''
             new_urls = set()
             # 抽取符合要求的  a 标记
-            links = soup.find_all('a',href=re.compile('https://blog.csdn.net/wujiandao/article/details/[0-9]*'))
+            links = soup.find_all('a',href=re.compile('https://blog.csdn.net/haiross/article/details/[0-9]*'))
             for link in links:
                 # 提取 href 属性
                 new_url = link['href']
@@ -135,7 +135,11 @@ class HtmlParser(object):
             '''
 
             data = {}
-            Htmldownloader = HtmlDownloader()
+
+            try:
+                Htmldownloader = HtmlDownloader()
+            except Error as e:
+                print(e)
 
             data['article_url'] = page_url
             html =  Htmldownloader.download(page_url)
@@ -144,7 +148,8 @@ class HtmlParser(object):
             data['title']=title[0].string
             updated = ind_soup.find_all("span",class_="time")
             data['update_date'] = updated[0].string
-
+            pageview = ind_soup.find_all("span",class_="txt")
+            data['pageviewcnt']= pageview[0].string
             print(data)
             return data
 
@@ -161,13 +166,20 @@ class DataOutput(object):
         if data is None:
             return
         for data_shard in data:
-
-            add_content =  " insert into article_header(article_url,title,update_date) values('%s','%s','%s' )" % (data_shard["article_url"],data_shard["title"],data_shard["update_date"])
+            args = [ str(data_shard["article_url"]),str(data_shard["title"]),str(data_shard["update_date"]),int(str(data_shard["pageviewcnt"]))]
+            procname = "article_page_view_update"
+            try:
+                return_reset = self.cursor.callproc(procname,args)
+            #add_content =  " insert into article_header(article_url,title,update_date) values('%s','%s','%s' )" % (data_shard["article_url"],data_shard["title"],data_shard["update_date"])
             #(%(article_url)s, %(article_title)s, %(article_update_date)s )
             # {"article_url":data_shard["article_url"],"article_title":data_shard["title"],"article_update_date":data_shard["update_date"]}
             # content = (data_shard["article_url"],data_shard["title"],data_shard["update_date"])
-            self.cursor.execute(add_content )
-            self.cnx.commit()
+            #self.cursor.execute(add_content )
+
+            except Error as e:
+                print(e)
+            finally:
+                self.cnx.commit()
 
     def output_html(self):
         fout = codecs.open('baike.html','w')
@@ -197,9 +209,8 @@ class SpiderMan(object):
     def crawl(self,root_url):
         # 添加入口 URL
         self.manager.add_new_url(root_url)
-        for i in range(2,11):
-            url_to_be_download = "https://blog.csdn.net/wujiandao/article/list/" + str(i)
-            print(str(i))
+        for i in range(2,80):
+            url_to_be_download = "https://blog.csdn.net/haiross/article/list/" + str(i)
             self.manager.add_new_url(url_to_be_download)
         # 判断 URL 管理器中是否有新的 url, 同时判断抓取了多少个 URL
         while(self.manager.has_new_url()):
@@ -226,5 +237,5 @@ class SpiderMan(object):
 
 if __name__ =="__main__":
     spider_man=SpiderMan()
-    spider_man.crawl("https://blog.csdn.net/wujiandao/article/list")
+    spider_man.crawl("https://blog.csdn.net/haiross/article/list")
 
