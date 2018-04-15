@@ -1,5 +1,7 @@
 # coding:utf-8
 
+import unicodedata
+import tomd
 import pickle
 import requests
 import re
@@ -138,11 +140,9 @@ class HtmlParser(object):
             '''
 
             data = {}
+            dbStore = DataOutput()
+            Htmldownloader = HtmlDownloader()
 
-            try:
-                Htmldownloader = HtmlDownloader()
-            except Error as e:
-                print(e)
 
             data['article_url'] = page_url
             html =  Htmldownloader.download(page_url)
@@ -153,9 +153,11 @@ class HtmlParser(object):
             data['update_date'] = updated[0].string
             pageview = ind_soup.find_all("span",class_="txt")
             data['pageviewcnt']= pageview[0].string
-            articlecontent = ind_soup.find_all("div",class_="markdown_views")
-            print(pickle.dumps(articlecontent))
-
+            articlecontent = ind_soup.find_all("div",class_="article_content")
+            md = tomd.convert(articlecontent[0].prettify())
+            # the page_content is too long to be saved in mysql blob data type , make that be saved on local folder as a file
+            data['page_content']=pickle.dumps(md.encode("utf-8"))
+            dbStore.store_data(data)
             print(data)
             return data
 
@@ -171,21 +173,16 @@ class DataOutput(object):
     def store_data(self,data):
         if data is None:
             return
-        for data_shard in data:
-            args = [ str(data_shard["article_url"]),str(data_shard["title"]),str(data_shard["update_date"]),int(str(data_shard["pageviewcnt"]))]
-            procname = "article_page_view_update"
-            try:
-                return_reset = self.cursor.callproc(procname,args)
+        #for data_shard in data
+        args =   [str(data["article_url"]),str(data["title"]),str(data["update_date"]),int(str(data["pageviewcnt"])),data["page_content"]]
+        procname = "article_page_view_update"
+        return_reset = self.cursor.callproc(procname,args)
             #add_content =  " insert into article_header(article_url,title,update_date) values('%s','%s','%s' )" % (data_shard["article_url"],data_shard["title"],data_shard["update_date"])
             #(%(article_url)s, %(article_title)s, %(article_update_date)s )
             # {"article_url":data_shard["article_url"],"article_title":data_shard["title"],"article_update_date":data_shard["update_date"]}
             # content = (data_shard["article_url"],data_shard["title"],data_shard["update_date"])
             #self.cursor.execute(add_content )
-
-            except Error as e:
-                print(e)
-            finally:
-                self.cnx.commit()
+        self.cnx.commit()
 
     def output_html(self):
         fout = codecs.open('baike.html','w')
@@ -220,7 +217,7 @@ class SpiderMan(object):
             self.manager.add_new_url(url_to_be_download)
         # 判断 URL 管理器中是否有新的 url, 同时判断抓取了多少个 URL
         while(self.manager.has_new_url()):
-            try:
+
                 # 从 URL 管理器获取新的 URL
                 new_url = self.manager.get_new_url()
                 # 从 HTML 下载器下载网页
@@ -230,12 +227,10 @@ class SpiderMan(object):
                 # 将抽取的 URL 添加到 URL 管理器中
                 # self.manager.add_new_urls(new_urls)
                 # 数据存储器存储文件
-                self.output.store_data(datas)
+               # self.output.store_data(datas)
                 message = "已经抓取 {s} 个链接".format(s= self.manager.old_url_size())
                 print(message)
-            except Exception:
-                print("failed to get content")
-                print ( errorcode)
+
 
 
        # self.output.output_html()

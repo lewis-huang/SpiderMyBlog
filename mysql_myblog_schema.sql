@@ -18,7 +18,9 @@
  select *from article_header order by update_date desc 
  select *from article_header order by articleId ASC
   
-  
+ CREATE TABLE article_content (articleId int, article_content text) 
+  ALTER TABLE article_content drop column article_content 
+  ALTER TABLE article_content add column article_content blob
   -- daily log table to save the page view count for each day
   
   CREATE TABLE article_page_view_daily (articleId int, date_load datetime, page_view_count int )
@@ -30,7 +32,8 @@
 	 ArticleUrl VARCHAR(256),
      Title NVARCHAR(200),
      UpdateDate NVARCHAR(200),	
-     PageViewCnt Int 
+     PageViewCnt Int , 
+     ArticleContent blob 
     )
   BEGIN 
 	
@@ -61,6 +64,14 @@
         WHERE articleId = ArticleIdX AND date(date_load) = date(current_date())  ;
 	END IF ;
     
+    IF ( NOT EXISTS(SELECT * FROM article_content WHERE articleId  = ArticleIdX ) ) Then    
+		INSERT INTO article_content(articleId,  article_content ) VALUES ( ArticleIdX, ArticleContent ) ;		
+	
+    ELSE
+		UPDATE article_content SET article_content = ArticleContent 
+        WHERE articleId = ArticleIdX ;
+	
+    END IF ;
   
   END //
   DELIMITER ;
@@ -203,4 +214,6 @@ ORDER BY
 
 
 
- 
+SELECT * FROM article_content  
+
+
