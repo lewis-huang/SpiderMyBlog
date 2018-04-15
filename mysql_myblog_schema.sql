@@ -58,7 +58,7 @@
 		VALUES(ArticleIdX, now(), PageViewCnt);
 	ELSE 
 		UPDATE article_page_view_daily SET page_view_count = PageViewCnt        
-        WHERE articleId = ArticleIdX ;
+        WHERE articleId = ArticleIdX AND date(date_load) = date(current_date())  ;
 	END IF ;
     
   
@@ -89,7 +89,7 @@ DELIMITER ;
   SET @ArticleUrl = 'www.baidu.com';
   SET @Title= 'Connecting Baidu.com' ;
   SET @UpdateDate= '2018-04-03';
-  SET @PageViewCnt = 600 ;
+  SET @PageViewCnt = 400 ;
   
   
    CALL article_page_view_update (@ArticleUrl,@Title,@UpdateDate,@PageViewCnt) ;
@@ -100,6 +100,13 @@ DELIMITER ;
   FROM article_header 
   WHERE article_url = @ArticleUrl ;
   
+  SELECT 
+    ah.*, ahc.*
+FROM
+    article_page_view_daily ahc
+        INNER JOIN
+    article_header ah ON ahc.articleId = ah.articleId
+     where article_url = 'www.baidu.com';
   
   
   SELECT 
