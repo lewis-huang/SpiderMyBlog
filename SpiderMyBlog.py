@@ -116,7 +116,7 @@ class HtmlParser(object):
             '''
             new_urls = set()
             # 抽取符合要求的  a 标记
-            links = soup.find_all('a',href=re.compile('https://blog.csdn.net/haiross/article/details/[0-9]*'))
+            links = soup.find_all('a',href=re.compile('https://blog.csdn.net/wujiandao/article/details/[0-9]*'))
             for link in links:
                 # 提取 href 属性
                 new_url = link['href']
@@ -210,7 +210,7 @@ class SpiderMan(object):
         # 添加入口 URL
         self.manager.add_new_url(root_url)
         for i in range(2,80):
-            url_to_be_download = "https://blog.csdn.net/haiross/article/list/" + str(i)
+            url_to_be_download = "https://blog.csdn.net/wujiandao/article/list/" + str(i)
             self.manager.add_new_url(url_to_be_download)
         # 判断 URL 管理器中是否有新的 url, 同时判断抓取了多少个 URL
         while(self.manager.has_new_url()):
@@ -237,5 +237,5 @@ class SpiderMan(object):
 
 if __name__ =="__main__":
     spider_man=SpiderMan()
-    spider_man.crawl("https://blog.csdn.net/haiross/article/list")
+    spider_man.crawl("https://blog.csdn.net/wujiandao/article/list")
 

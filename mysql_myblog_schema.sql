@@ -38,6 +38,8 @@
     
     IF ( NOT EXISTS(SELECT * FROM article_header WHERE article_url = ArticleUrl ) ) Then    
 		INSERT INTO article_header(article_url, title, update_date) VALUES ( ArticleUrl, Title, UpdateDate) ;
+	
+		
 	END IF;
 	
     
@@ -51,7 +53,7 @@
     
     
     SELECT ArticleIdX , ArticleUrl, Title, UpdateDate, PageViewCnt ;
-    IF (NOT EXISTS(SELECT * FROM article_page_view_daily where articleId = ArticleId )) Then
+    IF (NOT EXISTS( SELECT * FROM article_page_view_daily where articleId = ArticleIdX AND date(date_load) = date(current_date()) ) ) Then
 	INSERT INTO article_page_view_daily(articleId,date_load,page_view_count) 
 		VALUES(ArticleIdX, now(), PageViewCnt);
 	ELSE 
@@ -63,7 +65,7 @@
   END //
   DELIMITER ;
   
-  
+  select date(current_date())
   
 CREATE PROCEDURE article_page_view_update
 (
@@ -82,16 +84,12 @@ DELIMITER ;
   
   
   
-  
-  DECLARE ArticleUrl NVARCHAR(200) ;  
-  DECLARE Title NVARCHAR(200) ;
-  DECLARE UpdateDate NVARCHAR(200) ;
-  DECLARE PageViewCnt INT ;
+   
   
   SET @ArticleUrl = 'www.baidu.com';
   SET @Title= 'Connecting Baidu.com' ;
   SET @UpdateDate= '2018-04-03';
-  SET @PageViewCnt = 500 ;
+  SET @PageViewCnt = 600 ;
   
   
    CALL article_page_view_update (@ArticleUrl,@Title,@UpdateDate,@PageViewCnt) ;
@@ -102,17 +100,28 @@ DELIMITER ;
   FROM article_header 
   WHERE article_url = @ArticleUrl ;
   
-  SELECT ah.*, ahc.*
-  FROM article_page_view_daily ahc
-	INNER JOIN article_header ah on ahc.articleId = ah.articleId 
+  
+  
+  SELECT 
+    ah.*, ahc.*
+FROM
+    article_page_view_daily ahc
+        INNER JOIN
+    article_header ah ON ahc.articleId = ah.articleId
+    where article_url = 'https://blog.csdn.net/wujiandao/article/details/6855567'
+    
     
 SELECT * 
-  FROM article_header WHERE article_url = 'www.baidu.com';
-  SELECT * FROM article_page_view_daily ;
+  FROM article_header ;
+  
+ select max(articleId) from article_header ;
+  
+  SELECT * FROM article_page_view_daily 
+  order by articleId 
   
   
   delete from  article_page_view_daily ;
- --  truncate table article_header ;
+  truncate table article_header ;
  
  ALTER TABLE article_header ADD 
  
@@ -128,7 +137,7 @@ SELECT *
  
  
  
- 
+ set session transaction isolation level read uncommitted
  
  SELECT article_url,count(articleId) as articles
  FROM article_header 
@@ -140,4 +149,51 @@ SELECT *
   FROM article_header
   
   
+  
+SELECT  ARH.article_url, ARH.title, ARH.update_date,  DPV.date_load, DPV.page_view_count 
+FROM article_header ARH 
+	INNER JOIN article_page_view_daily DPV ON ARH.articleId = DPV.articleId
+WHERE page_view_count > 1000 and article_url like '%wujiandao%'   
+ORDER BY DPV.page_view_count DESC     
+LIMIT 100   
+
+
+
+
+SET @BeginDate = Date(Current_Date()) 
+SELECT  Date_Add(Date(Current_Date()) , Interval  -10 DAY) 
+
+SELECT Date_Add('2018-02-01', Interval 1 DAY)
+
+SET @NUMBER_VAR = 1 
+ SELECT DATE_ADD('2018-02-01', INTERVAL @NUMBER_VAR DAY)
+ 
+ 
+SELECT * 
+FROM article_page_view_daily
+
+
+SELECT AH.title, A.*, B.* , A.page_view_count  -  B.page_view_count  AS IncrementalCount
+FROM (
+		SELECT articleId, DATE(date_load) AS Date_load, page_view_count 
+        FROM article_page_view_daily 
+        WHERE articleId in (SELECT articleId from article_header WHERE article_url like '%wujiandao%' )
+			AND DATE(date_load) = '2018-04-15' 
+) A 
+	LEFT JOIN (
+					SELECT articleId, DATE(date_load) AS Date_load, page_view_count 
+					FROM article_page_view_daily 
+					WHERE articleId in (SELECT articleId from article_header WHERE article_url like '%wujiandao%' )
+						AND DATE(date_load) = '2018-04-05' 
+				) B
+	ON A.articleId = B.articleId 
+    
+    INNER JOIN article_header AH ON AH.articleId = A.articleId
+ORDER BY     
+    IncrementalCount DESC
+
+
+
+
+
  
