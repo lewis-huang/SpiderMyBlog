@@ -1,11 +1,14 @@
 # coding:utf-8
 
+import pickle
 import requests
 import re
 import mysql.connector
 from urllib import parse
 from bs4 import BeautifulSoup
 from mysql.connector import errorcode, Error
+
+
 
 class UrlManager(object):
     def __init__(self):
@@ -150,6 +153,9 @@ class HtmlParser(object):
             data['update_date'] = updated[0].string
             pageview = ind_soup.find_all("span",class_="txt")
             data['pageviewcnt']= pageview[0].string
+            articlecontent = ind_soup.find_all("div",class_="markdown_views")
+            print(pickle.dumps(articlecontent))
+
             print(data)
             return data
 
